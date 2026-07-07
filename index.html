@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Révisions d'espagnol</title>
+    <title>Le site d'espagnol</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; display: flex; justify-content: center; }
@@ -21,8 +21,8 @@
         .feedback { font-size: 18px; font-weight: bold; margin: 15px 0; padding: 10px; border-radius: 6px; display: none; }
         .correct { background-color: #d4edda; color: #155724; }
         .incorrect { background-color: #f8d7da; color: #721c24; }
-        .accents-tracker { display: flex; justify-content: center; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; }
-        .accent-btn { background: #e0e0e0; color: #333; padding: 8px 12px; font-size: 16px; border-radius: 4px; cursor: pointer; width: auto; min-width: 38px; margin: 0; }
+        .accents-tracker { display: flex; justify-content: center; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; margin-top: 5px; }
+        .accent-btn { background: #e0e0e0; color: #333; padding: 8px 12px; font-size: 16px; border-radius: 4px; cursor: pointer; width: auto; min-width: 38px; margin: 0; border: none; }
         .accent-btn:hover { background: #d0d0d0; }
         .hidden { display: none !important; }
         .progress { color: #7f8c8d; font-size: 14px; margin-bottom: 10px; }
@@ -34,8 +34,6 @@
         .chart-container { margin: 15px 0; background: #fafafa; padding: 10px; border-radius: 8px; border: 1px solid #e1e1e1; }
         .btn-abort { font-size: 13px; padding: 6px 12px; width: auto; background-color: #bdc3c7; color: #333; margin-bottom: 15px; }
         .btn-abort:hover { background-color: #95a5a6; color: white; }
-        
-        /* Styles pour l'édition des mots */
         .edit-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
         .edit-row:hover { background-color: #edf2f7; }
     </style>
@@ -79,7 +77,15 @@
         <div class="progress" id="quiz-progress">Question 0 / 0</div>
         <div class="word-display" id="french-word">---</div>
         <input type="text" id="spanish-input" placeholder="Tape la traduction ici..." autocomplete="off">
-        <div id="quiz-accents" class="accents-tracker"></div>
+        <div class="accents-tracker">
+            <button class="accent-btn" onclick="insertAccent('á', 'spanish-input')">á</button>
+            <button class="accent-btn" onclick="insertAccent('í', 'spanish-input')">í</button>
+            <button class="accent-btn" onclick="insertAccent('ó', 'spanish-input')">ó</button>
+            <button class="accent-btn" onclick="insertAccent('ú', 'spanish-input')">ú</button>
+            <button class="accent-btn" onclick="insertAccent('ñ', 'spanish-input')">ñ</button>
+            <button class="accent-btn" onclick="insertAccent('¿', 'spanish-input')">¿</button>
+            <button class="accent-btn" onclick="insertAccent('¡', 'spanish-input')">¡</button>
+        </div>
         <div id="feedback-box" class="feedback"></div>
         <button id="btn-submit">Vérifier</button>
         <button id="btn-next" class="hidden">Continuer</button>
@@ -96,7 +102,15 @@
         <input type="text" id="add-french" placeholder="ex: le chien">
         <label>Traduction en Espagnol (Sépare par un / s'il y en a plusieurs) :</label>
         <input type="text" id="add-spanish" placeholder="ex: el perro">
-        <div id="add-accents" class="accents-tracker"></div>
+        <div class="accents-tracker">
+            <button class="accent-btn" onclick="insertAccent('á', 'add-spanish')">á</button>
+            <button class="accent-btn" onclick="insertAccent('í', 'add-spanish')">í</button>
+            <button class="accent-btn" onclick="insertAccent('ó', 'add-spanish')">ó</button>
+            <button class="accent-btn" onclick="insertAccent('ú', 'add-spanish')">ú</button>
+            <button class="accent-btn" onclick="insertAccent('ñ', 'add-spanish')">ñ</button>
+            <button class="accent-btn" onclick="insertAccent('¿', 'add-spanish')">¿</button>
+            <button class="accent-btn" onclick="insertAccent('¡', 'add-spanish')">¡</button>
+        </div>
 
         <button id="btn-save-new-word">Enregistrer le mot</button>
         <button class="btn-back-to-menu secondary">Retour au menu</button>
@@ -109,9 +123,7 @@
         <select id="edit-filter-lesson"><option value="">-- Toutes les leçons --</option></select>
         <input type="text" id="edit-search-input" placeholder="Rechercher un mot français...">
         
-        <div id="edit-scroll-container" class="stat-list" style="max-height: 250px;">
-            <!-- Rempli par JS -->
-        </div>
+        <div id="edit-scroll-container" class="stat-list" style="max-height: 250px;"></div>
         <button class="btn-back-to-menu secondary">Retour au menu</button>
     </div>
 
@@ -125,7 +137,15 @@
         <input type="text" id="edit-french-field">
         <label>Espagnol :</label>
         <input type="text" id="edit-spanish-field">
-        <div id="edit-accents" class="accents-tracker"></div>
+        <div class="accents-tracker">
+            <button class="accent-btn" onclick="insertAccent('á', 'edit-spanish-field')">á</button>
+            <button class="accent-btn" onclick="insertAccent('í', 'edit-spanish-field')">í</button>
+            <button class="accent-btn" onclick="insertAccent('ó', 'edit-spanish-field')">ó</button>
+            <button class="accent-btn" onclick="insertAccent('ú', 'edit-spanish-field')">ú</button>
+            <button class="accent-btn" onclick="insertAccent('ñ', 'edit-spanish-field')">ñ</button>
+            <button class="accent-btn" onclick="insertAccent('¿', 'edit-spanish-field')">¿</button>
+            <button class="accent-btn" onclick="insertAccent('¡', 'edit-spanish-field')">¡</button>
+        </div>
 
         <button id="btn-save-edit-word" style="background-color: #2ecc71;">Sauvegarder les modifications</button>
         <button id="btn-cancel-edit" class="secondary">Annuler</button>
@@ -136,9 +156,9 @@
         <h2>Tableau de bord de Maman 📊</h2>
         <h3>📈 Évolution de ma réussite (%)</h3>
         <div class="chart-container"><canvas id="monthlyChart"></canvas></div>
-        <h3>🏆 Mots super bien maîtrisés (≥ 3 succès)</h3>
+        <h3>🏆 Mots bien maîtrisés (Réussite ≥ 75%)</h3>
         <ul id="mastered-words-list" class="stat-list"><li>Aucun mot maîtrisé pour le moment.</li></ul>
-        <h3>⚠️ Mots non maîtrisés (Le top des échecs)</h3>
+        <h3>⚠️ Mots en difficulté (Réussite < 60%)</h3>
         <ul id="failed-words-list" class="stat-list"><li>Tout est parfait ! Aucun échec enregistré.</li></ul>
         <button class="btn-back-to-menu secondary">Retour au menu</button>
         <button id="btn-clear-stats" class="secondary" style="background-color: #e74c3c; margin-top: 30px; font-size: 12px; padding: 6px;">🗑 Effacer tout mon historique et remettre à zéro</button>
@@ -155,7 +175,7 @@
 
 <script>
     // ⚠️ IMPORTANT : METS TON URL DE DÉPLOIEMENT GOOGLE APPS SCRIPT ICI ENTRE LES GUILLEMETS
-    const API_URL = "https://script.google.com/macros/s/AKfycbzwTI4bnvLJuiNg83NsJlxRMuf3Iqo2qWp0vEXm4Td7LxCVxxv9t0w7RK-pfArVKfTE/exec";
+    const API_URL = "VOTRE_URL_GOOGLE_APP_SCRIPT";
 
     let database = [];
     let currentQuiz = [];
@@ -165,14 +185,8 @@
     let sessionStats = [];
     let authToken = "";
     let myChartInstance = null;
-    let activeInputId = "spanish-input"; // Permet de savoir quel champ texte utilise le clavier d'accents
 
     window.onload = function() {
-        // Initialiser les claviers d'accents sur les différents écrans
-        buildAccentKeyboard("quiz-accents", "spanish-input");
-        buildAccentKeyboard("add-accents", "add-spanish");
-        buildAccentKeyboard("edit-accents", "edit-spanish-field");
-
         const savedToken = localStorage.getItem("maman_espagnol_token");
         if (savedToken) {
             authToken = savedToken;
@@ -367,7 +381,7 @@
         };
     });
 
-    // ÉCRAN DES STATISTIQUES
+    // ÉCRAN DES STATISTIQUES (AVEC RATIO EN POURCENTAGE)
     document.getElementById("btn-go-stats").onclick = function() {
         document.getElementById("menu-screen").classList.add("hidden");
         document.getElementById("stats-screen").classList.remove("hidden");
@@ -380,22 +394,22 @@
         masteredList.innerHTML = "<li>Aucun mot maîtrisé pour le moment.</li>";
         failedList.innerHTML = "<li>Tout est parfait ! Aucun échec enregistré.</li>";
 
-        // Filtrer les mots qui ont été joués au moins une fois
+        // Filtrer les mots joués au moins une fois
         const playedWords = database.filter(w => (Number(w.Succes) + Number(w.Echecs)) > 0);
 
-        // Calculer le pourcentage de réussite pour chaque mot et l'ajouter à l'objet
+        // Injecter le pourcentage de réussite sur chaque mot
         playedWords.forEach(w => {
             const ok = Number(w.Succes || 0);
             const fail = Number(w.Echecs || 0);
             w.pourcentage = Math.round((ok / (ok + fail)) * 100);
         });
 
-        // 🏆 Maîtrisés : Réussite >= 75% ET au moins 3 essais au total (pour éviter qu'un mot fait 1 seule fois à 100% soit considéré "maîtrisé")
+        // Maîtrisés : Réussite >= 75% ET au moins 3 essais distincts
         const masteredWords = playedWords
             .filter(w => w.pourcentage >= 75 && (Number(w.Succes) + Number(w.Echecs)) >= 3)
             .sort((a,b) => b.pourcentage - a.pourcentage);
 
-        // ⚠️ En difficulté : Réussite < 60% (classés du pire pourcentage au moins pire)
+        // En difficulté : Réussite < 60%
         const failedWords = playedWords
             .filter(w => w.pourcentage < 60)
             .sort((a,b) => a.pourcentage - b.pourcentage);
@@ -407,14 +421,10 @@
             failedList.innerHTML = failedWords.map(w => `<li><b>${w.Francais}</b> ➔ ${w.Espagnol} <span class="stat-badge" style="background:#e74c3c;">${w.pourcentage}%</span></li>`).join('');
         }
 
-        const monthlyList = document.getElementById("monthly-stats-list");
-        monthlyList.innerHTML = "<li>Calcul de l'historique...</li>";
-
         fetch(`${API_URL}?action=getScores&token=${encodeURIComponent(authToken)}`)
             .then(res => res.json())
             .then(scores => {
                 if(scores.length === 0) {
-                    monthlyList.innerHTML = "<li>Aucune session enregistrée pour le moment.</li>";
                     if(myChartInstance) myChartInstance.destroy(); return;
                 }
                 let monthsObj = {};
@@ -441,8 +451,7 @@
                     },
                     options: { responsive: true, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: function(v) { return v + '%'; } } } } }
                 });
-                monthlyList.innerHTML = "";
-            }).catch(() => { monthlyList.innerHTML = "<li>Aucun historique trouvé.</li>"; });
+            }).catch(err => console.error(err));
     }
 
     document.getElementById("btn-clear-stats").onclick = function() {
@@ -540,19 +549,15 @@
           .catch(err => { document.getElementById("saving-msg").innerText = "Erreur réseau."; console.error(err); });
     }
 
-    // Gestion dynamique du clavier d'accents sur l'input actif
-    function insertAccent(letter) {
-        // Déterminer quel écran est ouvert pour savoir quel input cibler
-        const activeInput = !document.getElementById("quiz-screen").classList.contains("hidden") 
-            ? document.getElementById("spanish-input") 
-            : document.getElementById("password-input");
-            
-        const start = activeInput.selectionStart;
-        const end = activeInput.selectionEnd;
-        const text = activeInput.value;
-        activeInput.value = text.substring(0, start) + letter + text.substring(end);
-        activeInput.selectionStart = activeInput.selectionEnd = start + 1;
-        activeInput.focus();
+    // Gestion propre de l'insertion des caractères spéciaux espagnols
+    function insertAccent(letter, inputId) {
+        const input = document.getElementById(inputId);
+        const start = input.selectionStart;
+        const end = input.selectionEnd;
+        const text = input.value;
+        input.value = text.substring(0, start) + letter + text.substring(end);
+        input.selectionStart = input.selectionEnd = start + 1;
+        input.focus();
     }
 </script>
 </body>
