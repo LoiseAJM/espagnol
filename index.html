@@ -380,11 +380,32 @@
         masteredList.innerHTML = "<li>Aucun mot maîtrisé pour le moment.</li>";
         failedList.innerHTML = "<li>Tout est parfait ! Aucun échec enregistré.</li>";
 
-        const masteredWords = database.filter(w => Number(w.Succes) >= 3).sort((a,b) => b.Succes - a.Succes);
-        const failedWords = database.filter(w => Number(w.Echecs) > 0).sort((a,b) => b.Echecs - a.Echecs);
+        // Filtrer les mots qui ont été joués au moins une fois
+        const playedWords = database.filter(w => (Number(w.Succes) + Number(w.Echecs)) > 0);
 
-        if(masteredWords.length > 0) masteredList.innerHTML = masteredWords.map(w => `<li><b>${w.Francais}</b> ➔ ${w.Espagnol} <span class="stat-badge">${w.Succes} ✓</span></li>`).join('');
-        if(failedWords.length > 0) failedList.innerHTML = failedWords.map(w => `<li><b>${w.Francais}</b> ➔ ${w.Espagnol} <span class="stat-badge" style="background:#e74c3c;">${w.Echecs} ✗</span></li>`).join('');
+        // Calculer le pourcentage de réussite pour chaque mot et l'ajouter à l'objet
+        playedWords.forEach(w => {
+            const ok = Number(w.Succes || 0);
+            const fail = Number(w.Echecs || 0);
+            w.pourcentage = Math.round((ok / (ok + fail)) * 100);
+        });
+
+        // 🏆 Maîtrisés : Réussite >= 75% ET au moins 3 essais au total (pour éviter qu'un mot fait 1 seule fois à 100% soit considéré "maîtrisé")
+        const masteredWords = playedWords
+            .filter(w => w.pourcentage >= 75 && (Number(w.Succes) + Number(w.Echecs)) >= 3)
+            .sort((a,b) => b.pourcentage - a.pourcentage);
+
+        // ⚠️ En difficulté : Réussite < 60% (classés du pire pourcentage au moins pire)
+        const failedWords = playedWords
+            .filter(w => w.pourcentage < 60)
+            .sort((a,b) => a.pourcentage - b.pourcentage);
+
+        if(masteredWords.length > 0) {
+            masteredList.innerHTML = masteredWords.map(w => `<li><b>${w.Francais}</b> ➔ ${w.Espagnol} <span class="stat-badge" style="background:#2ecc71;">${w.pourcentage}%</span></li>`).join('');
+        }
+        if(failedWords.length > 0) {
+            failedList.innerHTML = failedWords.map(w => `<li><b>${w.Francais}</b> ➔ ${w.Espagnol} <span class="stat-badge" style="background:#e74c3c;">${w.pourcentage}%</span></li>`).join('');
+        }
 
         const monthlyList = document.getElementById("monthly-stats-list");
         monthlyList.innerHTML = "<li>Calcul de l'historique...</li>";
