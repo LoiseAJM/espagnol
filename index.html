@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Le site d'espagnol de Maman</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
+        h1 { color: #2c3e50; margin-bottom: 25px; }
+        h3 { color: #34495e; margin-top: 20px; border-bottom: 2px solid #ecf0f1; padding-bottom: 5px; text-align: left; }
+        button { background-color: #3498db; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; transition: 0.2s; width: 100%; margin: 8px 0; box-sizing: border-box; }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        button.secondary { background-color: #95a5a6; }
+        button.secondary:hover { background-color: #7f8c8d; }
+        select, input { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #bdc3c7; border-radius: 8px; font-size: 16px; box-sizing: border-box; text-align: center; }
+        label { display: block; text-align: left; font-weight: bold; color: #34495e; margin-top: 10px; }
+        .word-display { font-size: 28px; font-weight: bold; color: #2c3e50; margin: 20px 0; min-height: 40px; }
+        .feedback { font-size: 18px; font-weight: bold; margin: 15px 0; padding: 10px; border-radius: 6px; display: none; }
+        .correct { background-color: #d4edda; color: #155724; }
+        .incorrect { background-color: #f8d7da; color: #721c24; }
+        .accents-tracker { display: flex; justify-content: center; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; }
+        .accent-btn { background: #e0e0e0; color: #333; padding: 8px 12px; font-size: 16px; border-radius: 4px; cursor: pointer; width: auto; min-width: 38px; margin: 0; }
+        .accent-btn:hover { background: #d0d0d0; }
+        .hidden { display: none !important; }
+        .progress { color: #7f8c8d; font-size: 14px; margin-bottom: 10px; }
+        .error-txt { color: #e74c3c; font-weight: bold; margin-top: 10px; }
+        .stat-badge { background: #34495e; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; float: right; }
+        .stat-list { text-align: left; max-height: 150px; overflow-y: auto; padding: 5px; border: 1px solid #e1e1e1; border-radius: 6px; background: #fafafa; list-style: none; margin: 5px 0 15px 0; }
+        .stat-list li { padding: 6px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .stat-list li:last-child { border-bottom: none; }
+        .chart-container { margin: 15px 0; background: #fafafa; padding: 10px; border-radius: 8px; border: 1px solid #e1e1e1; }
+        .btn-abort { font-size: 13px; padding: 6px 12px; width: auto; background-color: #bdc3c7; color: #333; margin-bottom: 15px; }
+        .btn-abort:hover { background-color: #95a5a6; color: white; }
+        
+        /* Styles pour l'édition des mots */
+        .edit-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .edit-row:hover { background-color: #edf2f7; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 id="main-title">¡Hola Maman! 🇪🇸</h1>
+    
+    <!-- ÉCRAN DE CONNEXION -->
+    <div id="login-screen">
+        <p>Entre ton mot de passe secret pour ouvrir ton carnet :</p>
+        <input type="password" id="password-input" placeholder="Mot de passe...">
+        <button id="btn-login">Se connecter</button>
+        <p id="login-error" class="error-txt hidden">Mot de passe incorrect, réessaye.</p>
+        <p id="auto-loading" class="hidden" style="color:#7f8c8d;">Ouverture automatique du carnet...</p>
+    </div>
+
+    <!-- ÉCRAN DE SÉLECTION (MENU) -->
+    <div id="menu-screen" class="hidden">
+        <p>Choisis ton mode d'entraînement :</p>
+        <select id="lesson-select">
+            <option value="">-- Charger les leçons... --</option>
+        </select>
+        <button id="btn-lesson" disabled>Réviser cette leçon</button>
+        <button id="btn-random" class="secondary">20 mots au hasard</button>
+        <button id="btn-hard" style="background-color: #e67e22;" disabled>Mots difficiles (mes échecs)</button>
+        <button id="btn-go-stats" style="background-color: #2ecc71;">📊 Voir mes statistiques</button>
+        
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button id="btn-go-add" class="secondary" style="background-color: #9b59b6; margin: 0;">➕ Ajouter un mot</button>
+            <button id="btn-go-edit" class="secondary" style="background-color: #f1c40f; color: #333; margin: 0;">✏ Modifier le carnet</button>
+        </div>
+        
+        <button onclick="logout()" class="secondary" style="background-color: #e74c3c; margin-top: 25px; font-size: 13px; padding: 6px;">Changer de mot de passe / Déconnexion</button>
+    </div>
+
+    <!-- ÉCRAN DE JEU -->
+    <div id="quiz-screen" class="hidden">
+        <button id="btn-abort-quiz" class="btn-abort">↩ Retour au menu</button>
+        <div class="progress" id="quiz-progress">Question 0 / 0</div>
+        <div class="word-display" id="french-word">---</div>
+        <input type="text" id="spanish-input" placeholder="Tape la traduction ici..." autocomplete="off">
+        <div id="quiz-accents" class="accents-tracker"></div>
+        <div id="feedback-box" class="feedback"></div>
+        <button id="btn-submit">Vérifier</button>
+        <button id="btn-next" class="hidden">Continuer</button>
+    </div>
+
+    <!-- ÉCRAN AJOUTER UN MOT / UNE LEÇON -->
+    <div id="add-screen" class="hidden">
+        <h2>Ajouter un mot au carnet ➕</h2>
+        <label>Leçon (Choisis une leçon existante ou écris-en une nouvelle) :</label>
+        <select id="add-lesson-select"></select>
+        <input type="text" id="add-lesson-custom" placeholder="Ou écris une nouvelle leçon (ex: Leçon 21)...">
+        
+        <label>Mot en Français :</label>
+        <input type="text" id="add-french" placeholder="ex: le chien">
+        <label>Traduction en Espagnol (Sépare par un / s'il y en a plusieurs) :</label>
+        <input type="text" id="add-spanish" placeholder="ex: el perro">
+        <div id="add-accents" class="accents-tracker"></div>
+
+        <button id="btn-save-new-word">Enregistrer le mot</button>
+        <button class="btn-back-to-menu secondary">Retour au menu</button>
+    </div>
+
+    <!-- ÉCRAN MODIFIER / CHERCHER UN MOT -->
+    <div id="edit-list-screen" class="hidden">
+        <h2>Modifier le carnet ✏</h2>
+        <p>Recherche un mot ou filtre par leçon pour le modifier :</p>
+        <select id="edit-filter-lesson"><option value="">-- Toutes les leçons --</option></select>
+        <input type="text" id="edit-search-input" placeholder="Rechercher un mot français...">
+        
+        <div id="edit-scroll-container" class="stat-list" style="max-height: 250px;">
+            <!-- Rempli par JS -->
+        </div>
+        <button class="btn-back-to-menu secondary">Retour au menu</button>
+    </div>
+
+    <!-- ÉCRAN FORMULAIRE DE MODIFICATION -->
+    <div id="edit-form-screen" class="hidden">
+        <h2>Modifier le mot 📝</h2>
+        <input type="hidden" id="edit-rownum">
+        <label>Leçon :</label>
+        <input type="text" id="edit-lesson-field">
+        <label>Français :</label>
+        <input type="text" id="edit-french-field">
+        <label>Espagnol :</label>
+        <input type="text" id="edit-spanish-field">
+        <div id="edit-accents" class="accents-tracker"></div>
+
+        <button id="btn-save-edit-word" style="background-color: #2ecc71;">Sauvegarder les modifications</button>
+        <button id="btn-cancel-edit" class="secondary">Annuler</button>
+    </div>
+
+    <!-- ÉCRAN DES STATISTIQUES -->
+    <div id="stats-screen" class="hidden">
+        <h2>Tableau de bord de Maman 📊</h2>
+        <h3>📈 Évolution de ma réussite (%)</h3>
+        <div class="chart-container"><canvas id="monthlyChart"></canvas></div>
+        <h3>🏆 Mots super bien maîtrisés (≥ 3 succès)</h3>
+        <ul id="mastered-words-list" class="stat-list"><li>Aucun mot maîtrisé pour le moment.</li></ul>
+        <h3>⚠️ Mots non maîtrisés (Le top des échecs)</h3>
+        <ul id="failed-words-list" class="stat-list"><li>Tout est parfait ! Aucun échec enregistré.</li></ul>
+        <button class="btn-back-to-menu secondary">Retour au menu</button>
+        <button id="btn-clear-stats" class="secondary" style="background-color: #e74c3c; margin-top: 30px; font-size: 12px; padding: 6px;">🗑 Effacer tout mon historique et remettre à zéro</button>
+    </div>
+
+    <!-- ÉCRAN DE FIN -->
+    <div id="result-screen" class="hidden">
+        <h2>Session terminée !</h2>
+        <div class="word-display" id="final-score" style="font-size: 40px; color: #27ae60;">0 / 0</div>
+        <p id="saving-msg" style="color: #7f8c8d;">Sauvegarde du score...</p>
+        <button onclick="window.location.reload()">Retour au menu</button>
+    </div>
+</div>
+
+<script>
+    // ⚠️ IMPORTANT : METS TON URL DE DÉPLOIEMENT GOOGLE APPS SCRIPT ICI ENTRE LES GUILLEMETS
+    const API_URL = "https://script.google.com/macros/s/AKfycbzwTI4bnvLJuiNg83NsJlxRMuf3Iqo2qWp0vEXm4Td7LxCVxxv9t0w7RK-pfArVKfTE/exec";
+
+    let database = [];
+    let currentQuiz = [];
+    let currentIndex = 0;
+    let score = 0;
+    let currentModeName = "";
+    let sessionStats = [];
+    let authToken = "";
+    let myChartInstance = null;
+    let activeInputId = "spanish-input"; // Permet de savoir quel champ texte utilise le clavier d'accents
+
+    window.onload = function() {
+        // Initialiser les claviers d'accents sur les différents écrans
+        buildAccentKeyboard("quiz-accents", "spanish-input");
+        buildAccentKeyboard("add-accents", "add-spanish");
+        buildAccentKeyboard("edit-accents", "edit-spanish-field");
+
+        const savedToken = localStorage.getItem("maman_espagnol_token");
+        if (savedToken) {
+            authToken = savedToken;
+            document.getElementById("password-input").classList.add("hidden");
+            document.getElementById("btn-login").classList.add("hidden");
+            document.getElementById("auto-loading").classList.remove("hidden");
+            loadDatabase(savedToken, true);
+        }
+    };
+
+    document.getElementById("btn-login").onclick = function() {
+        const pass = document.getElementById("password-input").value.trim();
+        loadDatabase(pass, false);
+    };
+
+    function loadDatabase(token, isAuto) {
+        document.getElementById("login-error").classList.add("hidden");
+        fetch(`${API_URL}?action=getVocab&token=${encodeURIComponent(token)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) throw new Error(data.error);
+                database = data;
+                authToken = token;
+                localStorage.setItem("maman_espagnol_token", token);
+                document.getElementById("login-screen").classList.add("hidden");
+                document.getElementById("menu-screen").classList.remove("hidden");
+                initMenu();
+            })
+            .catch(err => {
+                console.error(err);
+                localStorage.removeItem("maman_espagnol_token");
+                document.getElementById("password-input").classList.remove("hidden");
+                document.getElementById("btn-login").classList.remove("hidden");
+                document.getElementById("auto-loading").classList.add("hidden");
+                document.getElementById("login-error").classList.remove("hidden");
+            });
+    }
+
+    function initMenu() {
+        const lessons = [...new Set(database.map(item => item.Lecon))].filter(Boolean);
+        lessons.sort((a, b) => {
+            const numA = parseInt(a.replace(/\D/g, '')) || 0;
+            const numB = parseInt(b.replace(/\D/g, '')) || 0;
+            return numA - numB;
+        });
+
+        const select = document.getElementById("lesson-select");
+        select.innerHTML = '<option value="">-- Choisir une leçon --</option>';
+        lessons.forEach(l => {
+            let opt = document.createElement("option"); opt.value = l; opt.innerText = l;
+            select.appendChild(opt);
+        });
+
+        select.onchange = () => { document.getElementById("btn-lesson").disabled = !select.value; };
+        const hasHardWords = database.some(item => Number(item.Echecs) > 0);
+        if(hasHardWords) document.getElementById("btn-hard").disabled = false;
+    }
+
+    // GESTION ÉCRAN : AJOUTER UN MOT
+    document.getElementById("btn-go-add").onclick = function() {
+        document.getElementById("menu-screen").classList.add("hidden");
+        document.getElementById("add-screen").classList.remove("hidden");
+        
+        const addSelect = document.getElementById("add-lesson-select");
+        addSelect.innerHTML = '<option value="">-- Nouvelle leçon écrite en dessous --</option>';
+        const lessons = [...new Set(database.map(item => item.Lecon))].filter(Boolean).sort();
+        lessons.forEach(l => {
+            let opt = document.createElement("option"); opt.value = l; opt.innerText = l;
+            addSelect.appendChild(opt);
+        });
+        document.getElementById("add-french").value = "";
+        document.getElementById("add-spanish").value = "";
+        document.getElementById("add-lesson-custom").value = "";
+    };
+
+    document.getElementById("btn-save-new-word").onclick = function() {
+        const selectLecon = document.getElementById("add-lesson-select").value;
+        const customLecon = document.getElementById("add-lesson-custom").value.trim();
+        const finalLecon = customLecon !== "" ? customLecon : selectLecon;
+        const fr = document.getElementById("add-french").value.trim();
+        const es = document.getElementById("add-spanish").value.trim();
+
+        if(!finalLecon || !fr || !es) { alert("Tu dois remplir toutes les cases !"); return; }
+
+        document.getElementById("btn-save-new-word").innerText = "Enregistrement...";
+        document.getElementById("btn-save-new-word").disabled = true;
+
+        fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "addWord", token: authToken, lecon: finalLecon, francais: fr, espagnol: es })
+        }).then(res => res.json()).then(() => {
+            alert("Mot ajouté avec succès !");
+            window.location.reload();
+        }).catch(() => {
+            alert("Erreur de connexion.");
+            document.getElementById("btn-save-new-word").innerText = "Enregistrer le mot";
+            document.getElementById("btn-save-new-word").disabled = false;
+        });
+    };
+
+    // GESTION ÉCRAN : LISTE DE MODIFICATION
+    document.getElementById("btn-go-edit").onclick = function() {
+        document.getElementById("menu-screen").classList.add("hidden");
+        document.getElementById("edit-list-screen").classList.remove("hidden");
+        
+        const filterSelect = document.getElementById("edit-filter-lesson");
+        filterSelect.innerHTML = '<option value="">-- Toutes les leçons --</option>';
+        const lessons = [...new Set(database.map(item => item.Lecon))].filter(Boolean).sort();
+        lessons.forEach(l => {
+            let opt = document.createElement("option"); opt.value = l; opt.innerText = l;
+            filterSelect.appendChild(opt);
+        });
+        document.getElementById("edit-search-input").value = "";
+        renderEditList();
+    };
+
+    document.getElementById("edit-filter-lesson").onchange = renderEditList;
+    document.getElementById("edit-search-input").oninput = renderEditList;
+
+    function renderEditList() {
+        const filter = document.getElementById("edit-filter-lesson").value;
+        const search = document.getElementById("edit-search-input").value.toLowerCase().trim();
+        const container = document.getElementById("edit-scroll-container");
+        container.innerHTML = "";
+
+        let filtered = database.filter(w => {
+            const matchLecon = filter === "" || w.Lecon === filter;
+            const matchSearch = search === "" || w.Francais.toLowerCase().includes(search);
+            return matchLecon && matchSearch;
+        });
+
+        if(filtered.length === 0) {
+            container.innerHTML = "<div style='padding:10px;'>Aucun mot trouvé.</div>";
+            return;
+        }
+
+        filtered.forEach(w => {
+            let div = document.createElement("div");
+            div.className = "edit-row";
+            div.innerHTML = `<div><b>${w.Francais}</b> ➔ ${w.Espagnol}</div><span style='font-size:11px; color:#7f8c8d;'>${w.Lecon} ✏</span>`;
+            div.onclick = () => openEditForm(w);
+            container.appendChild(div);
+        });
+    }
+
+    function openEditForm(word) {
+        document.getElementById("edit-list-screen").classList.add("hidden");
+        document.getElementById("edit-form-screen").classList.remove("hidden");
+        document.getElementById("edit-rownum").value = word.rowNum;
+        document.getElementById("edit-lesson-field").value = word.Lecon;
+        document.getElementById("edit-french-field").value = word.Francais;
+        document.getElementById("edit-spanish-field").value = word.Espagnol;
+    }
+
+    document.getElementById("btn-cancel-edit").onclick = function() {
+        document.getElementById("edit-form-screen").classList.add("hidden");
+        document.getElementById("edit-list-screen").classList.remove("hidden");
+    };
+
+    document.getElementById("btn-save-edit-word").onclick = function() {
+        const row = document.getElementById("edit-rownum").value;
+        const lecon = document.getElementById("edit-lesson-field").value.trim();
+        const fr = document.getElementById("edit-french-field").value.trim();
+        const es = document.getElementById("edit-spanish-field").value.trim();
+
+        if(!lecon || !fr || !es) { alert("Toutes les cases doivent être remplies !"); return; }
+
+        document.getElementById("btn-save-edit-word").innerText = "Sauvegarde...";
+        document.getElementById("btn-save-edit-word").disabled = true;
+
+        fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({ action: "editWord", token: authToken, rowNum: Number(row), lecon: lecon, francais: fr, espagnol: es })
+        }).then(res => res.json()).then(() => {
+            alert("Le mot a été modifié !");
+            window.location.reload();
+        }).catch(() => {
+            alert("Erreur réseau.");
+            document.getElementById("btn-save-edit-word").innerText = "Sauvegarder les modifications";
+            document.getElementById("btn-save-edit-word").disabled = false;
+        });
+    };
+
+    // BOUTONS GLOBAL RETOUR MENU
+    const backButtons = document.querySelectorAll(".btn-back-to-menu");
+    backButtons.forEach(btn => {
+        btn.onclick = function() {
+            document.getElementById("add-screen").classList.add("hidden");
+            document.getElementById("edit-list-screen").classList.add("hidden");
+            document.getElementById("stats-screen").classList.add("hidden");
+            document.getElementById("menu-screen").classList.remove("hidden");
+        };
+    });
+
+    // ÉCRAN DES STATISTIQUES
+    document.getElementById("btn-go-stats").onclick = function() {
+        document.getElementById("menu-screen").classList.add("hidden");
+        document.getElementById("stats-screen").classList.remove("hidden");
+        refreshStatsUI();
+    };
+
+    function refreshStatsUI() {
+        const masteredList = document.getElementById("mastered-words-list");
+        const failedList = document.getElementById("failed-words-list");
+        masteredList.innerHTML = "<li>Aucun mot maîtrisé pour le moment.</li>";
+        failedList.innerHTML = "<li>Tout est parfait ! Aucun échec enregistré.</li>";
+
+        const masteredWords = database.filter(w => Number(w.Succes) >= 3).sort((a,b) => b.Succes - a.Succes);
+        const failedWords = database.filter(w => Number(w.Echecs) > 0).sort((a,b) => b.Echecs - a.Echecs);
+
+        if(masteredWords.length > 0) masteredList.innerHTML = masteredWords.map(w => `<li><b>${w.Francais}</b> ➔ ${w.Espagnol} <span class="stat-badge">${w.Succes} ✓</span></li>`).join('');
+        if(failedWords.length > 0) failedList.innerHTML = failedWords.map(w => `<li><b>${w.Francais}</b> ➔ ${w.Espagnol} <span class="stat-badge" style="background:#e74c3c;">${w.Echecs} ✗</span></li>`).join('');
+
+        const monthlyList = document.getElementById("monthly-stats-list");
+        monthlyList.innerHTML = "<li>Calcul de l'historique...</li>";
+
+        fetch(`${API_URL}?action=getScores&token=${encodeURIComponent(authToken)}`)
+            .then(res => res.json())
+            .then(scores => {
+                if(scores.length === 0) {
+                    monthlyList.innerHTML = "<li>Aucune session enregistrée pour le moment.</li>";
+                    if(myChartInstance) myChartInstance.destroy(); return;
+                }
+                let monthsObj = {};
+                scores.forEach(s => {
+                    let month = s.Date;
+                    if(!monthsObj[month]) monthsObj[month] = { score: 0, total: 0 };
+                    monthsObj[month].score += Number(s.Score); monthsObj[month].total += Number(s.Total);
+                });
+
+                let sortedMonths = Object.keys(monthsObj).sort();
+                let chartLabels = []; let chartData = [];
+                sortedMonths.forEach(m => {
+                    chartLabels.push(m);
+                    chartData.push(Math.round((monthsObj[m].score / monthsObj[m].total) * 100));
+                });
+
+                if(myChartInstance) myChartInstance.destroy();
+                const ctx = document.getElementById('monthlyChart').getContext('2d');
+                myChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: chartLabels,
+                        datasets: [{ label: '% de bonnes réponses', data: chartData, backgroundColor: '#2ecc71', borderColor: '#27ae60', borderWidth: 1, borderRadius: 5 }]
+                    },
+                    options: { responsive: true, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: function(v) { return v + '%'; } } } } }
+                });
+                monthlyList.innerHTML = "";
+            }).catch(() => { monthlyList.innerHTML = "<li>Aucun historique trouvé.</li>"; });
+    }
+
+    document.getElementById("btn-clear-stats").onclick = function() {
+        if (confirm("ATTENTION : Cette action va effacer définitivement tout l'historique des graphiques et remettre à zéro les compteurs. Continuer ?")) {
+            const codeMagique = prompt("Pour valider, écris le nombre de sécurité : 1234");
+            if (codeMagique === "1234") {
+                document.getElementById("btn-clear-stats").innerText = "Remise à zéro...";
+                document.getElementById("btn-clear-stats").disabled = true;
+                fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "clearStats", token: authToken }) })
+                    .then(res => res.json()).then(() => { alert("Le carnet a été remis à zéro !"); window.location.reload(); })
+                    .catch(() => { alert("Erreur réseau."); window.location.reload(); });
+            } else { alert("Nombre incorrect."); }
+        }
+    };
+
+    document.getElementById("btn-abort-quiz").onclick = function() {
+        if (confirm("Es-tu sûre de vouloir abandonner cette leçon et revenir au menu ?")) {
+            document.getElementById("quiz-screen").classList.add("hidden");
+            document.getElementById("menu-screen").classList.remove("hidden");
+        }
+    };
+
+    function logout() { localStorage.setItem("maman_espagnol_token", ""); window.location.reload(); }
+
+    document.getElementById("btn-lesson").onclick = () => {
+        const lesson = document.getElementById("lesson-select").value;
+        currentQuiz = database.filter(item => item.Lecon === lesson); startQuiz(lesson);
+    };
+
+    document.getElementById("btn-random").onclick = () => {
+        currentQuiz = [...database].sort(() => 0.5 - Math.random()).slice(0, 20); startQuiz("Mots au hasard");
+    };
+
+    document.getElementById("btn-hard").onclick = () => {
+        currentQuiz = database.filter(item => Number(item.Echecs) > 0).sort((a, b) => Number(b.Echecs) - Number(a.Echecs)).slice(0, 20); startQuiz("Mots difficiles");
+    };
+
+    function startQuiz(modeName) {
+        currentModeName = modeName; currentIndex = 0; score = 0; sessionStats = [];
+        document.getElementById("menu-screen").classList.add("hidden");
+        document.getElementById("quiz-screen").classList.remove("hidden");
+        showQuestion();
+    }
+
+    function showQuestion() {
+        document.getElementById("feedback-box").style.display = "none";
+        document.getElementById("btn-submit").classList.remove("hidden");
+        document.getElementById("btn-next").classList.add("hidden");
+        const input = document.getElementById("spanish-input");
+        input.value = ""; input.disabled = false; input.focus();
+        const currentWord = currentQuiz[currentIndex];
+        document.getElementById("quiz-progress").innerText = `Mot ${currentIndex + 1} / ${currentQuiz.length}`;
+        document.getElementById("french-word").innerText = currentWord.Francais;
+    }
+
+    document.getElementById("btn-submit").onclick = checkAnswer;
+    document.getElementById("spanish-input").addEventListener("keypress", function(e) {
+        if (e.key === "Enter" && !document.getElementById("btn-submit").classList.contains("hidden")) checkAnswer();
+    });
+
+    function checkAnswer() {
+        const userInput = document.getElementById("spanish-input").value.trim().toLowerCase();
+        const currentWord = currentQuiz[currentIndex];
+        const correctAnswers = currentWord.Espagnol.split("/").map(ans => ans.trim().toLowerCase());
+        const feedbackBox = document.getElementById("feedback-box");
+        feedbackBox.style.display = "block";
+        document.getElementById("spanish-input").disabled = true;
+        document.getElementById("btn-submit").classList.add("hidden");
+        document.getElementById("btn-next").classList.remove("hidden");
+        document.getElementById("btn-next").focus();
+
+        let isCorrect = correctAnswers.includes(userInput);
+        if (isCorrect) {
+            score++; feedbackBox.innerText = "¡ Muy bien ! 🌟"; feedbackBox.className = "feedback correct";
+        } else {
+            feedbackBox.innerText = `Dommage ! La bonne réponse était : ${currentWord.Espagnol}`; feedbackBox.className = "feedback incorrect";
+        }
+        sessionStats.push({ rowNum: currentWord.rowNum, correct: isCorrect });
+    }
+
+    document.getElementById("btn-next").onclick = () => {
+        currentIndex++; if (currentIndex < currentQuiz.length) showQuestion(); else endQuiz();
+    };
+
+    function endQuiz() {
+        document.getElementById("quiz-screen").classList.add("hidden");
+        document.getElementById("result-screen").classList.remove("hidden");
+        document.getElementById("final-score").innerText = `${score} / ${currentQuiz.length}`;
+        const scorePayload = { action: "saveScore", token: authToken, lecon: currentModeName, score: score, total: currentQuiz.length };
+        const statsPayload = { action: "updateStats", token: authToken, stats: sessionStats };
+        Promise.all([
+            fetch(API_URL, { method: "POST", body: JSON.stringify(scorePayload) }),
+            fetch(API_URL, { method: "POST", body: JSON.stringify(statsPayload) })
+        ]).then(() => { document.getElementById("saving-msg").innerText = "Progression synchronisée avec succès ! ✅"; })
+          .catch(err => { document.getElementById("saving-msg").innerText = "Erreur réseau."; console.error(err); });
+    }
+
+    // Gestion dynamique du clavier d'accents sur l'input actif
+    function insertAccent(letter) {
+        // Déterminer quel écran est ouvert pour savoir quel input cibler
+        const activeInput = !document.getElementById("quiz-screen").classList.contains("hidden") 
+            ? document.getElementById("spanish-input") 
+            : document.getElementById("password-input");
+            
+        const start = activeInput.selectionStart;
+        const end = activeInput.selectionEnd;
+        const text = activeInput.value;
+        activeInput.value = text.substring(0, start) + letter + text.substring(end);
+        activeInput.selectionStart = activeInput.selectionEnd = start + 1;
+        activeInput.focus();
+    }
+</script>
+</body>
+</html>
