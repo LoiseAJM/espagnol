@@ -15,7 +15,7 @@
         button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
         button.secondary { background-color: #95a5a6; }
         button.secondary:hover { background-color: #7f8c8d; }
-        select, input { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #bdc3c7; border-radius: 8px; font-size: 16px; box-sizing: border-box; text-align: center; }
+        select, input[type="text"], input[type="password"] { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #bdc3c7; border-radius: 8px; font-size: 16px; box-sizing: border-box; text-align: center; }
         label { display: block; text-align: left; font-weight: bold; color: #34495e; margin-top: 10px; }
         .word-display { font-size: 28px; font-weight: bold; color: #2c3e50; margin: 20px 0; min-height: 40px; }
         .feedback { font-size: 18px; font-weight: bold; margin: 15px 0; padding: 10px; border-radius: 6px; display: none; }
@@ -56,15 +56,13 @@
     <div id="menu-screen" class="hidden">
         <p>Choisis ton mode d'entraînement :</p>
         
-        <!-- Modification de la balise select -->
-        <select id="lesson-select" multiple size="5" style="height: auto; min-height: 120px;">
-            <option value="">-- Charger les leçons... --</option>
-        </select>
-        <p style="font-size: 12px; color: #7f8c8d; margin-top: -5px;">Maintenez <b>Ctrl</b> (ou <b>Cmd</b> sur Mac) pour sélectionner plusieurs leçons.</p>
+        <!-- Boîte avec les cases à cocher -->
+        <div id="lesson-checkbox-container" style="text-align: left; max-height: 150px; overflow-y: auto; border: 2px solid #bdc3c7; border-radius: 8px; padding: 10px; margin: 10px 0; background: #fff;">
+            <span style="color: #7f8c8d; font-size: 14px;">Chargement des leçons...</span>
+        </div>
 
         <button id="btn-lesson" disabled>Réviser ces leçons</button>
         <button id="btn-random" class="secondary">20 mots au hasard</button>
-        <!-- Modification du bouton "Mots difficiles" -->
         <button id="btn-hard" style="background-color: #e67e22;" disabled>Réviser mes erreurs</button>
         <button id="btn-go-stats" style="background-color: #2ecc71;">📊 Voir mes statistiques</button>
         
@@ -238,17 +236,35 @@
             return numA - numB;
         });
 
-        const select = document.getElementById("lesson-select");
-        select.innerHTML = '<option value="">-- Choisir une leçon --</option>';
+        const container = document.getElementById("lesson-checkbox-container");
+        container.innerHTML = ''; 
+        
         lessons.forEach(l => {
-            let opt = document.createElement("option"); opt.value = l; opt.innerText = l;
-            select.appendChild(opt);
+            let label = document.createElement("label");
+            label.style.display = "block";
+            label.style.margin = "5px 0";
+            label.style.cursor = "pointer";
+            label.style.fontWeight = "normal";
+            
+            let cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.value = l;
+            cb.className = "lesson-cb";
+            cb.style.width = "auto";
+            cb.style.marginRight = "10px";
+            cb.style.display = "inline-block";
+            
+            // On vérifie si au moins une case est cochée pour activer le bouton
+            cb.onchange = () => {
+                const checkedBoxes = document.querySelectorAll(".lesson-cb:checked");
+                document.getElementById("btn-lesson").disabled = checkedBoxes.length === 0;
+            };
+
+            label.appendChild(cb);
+            label.appendChild(document.createTextNode(l));
+            container.appendChild(label);
         });
 
-        // Modification de la sélection
-        select.onchange = () => { 
-            document.getElementById("btn-lesson").disabled = select.selectedOptions.length === 0 || select.selectedOptions[0].value === ""; 
-        };
         const hasHardWords = database.some(item => Number(item.Echecs) > 0);
         if(hasHardWords) document.getElementById("btn-hard").disabled = false;
     }
@@ -505,11 +521,13 @@
 
     function logout() { localStorage.setItem("maman_espagnol_token", ""); window.location.reload(); }
 
-    // Modification du bouton pour réviser la leçon
+    // Modification du bouton pour réviser la leçon (avec cases à cocher)
     document.getElementById("btn-lesson").onclick = () => {
-        const selectedOptions = Array.from(document.getElementById("lesson-select").selectedOptions).map(opt => opt.value);
+        const selectedOptions = Array.from(document.querySelectorAll(".lesson-cb:checked")).map(cb => cb.value);
         currentQuiz = database.filter(item => selectedOptions.includes(item.Lecon)); 
-        startQuiz(selectedOptions.join(", "));
+        
+        let modeName = selectedOptions.length > 1 ? `Plusieurs leçons (${selectedOptions.length})` : selectedOptions[0];
+        startQuiz(modeName);
     };
 
     document.getElementById("btn-random").onclick = () => {
