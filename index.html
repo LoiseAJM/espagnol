@@ -55,12 +55,17 @@
     <!-- ÉCRAN DE SÉLECTION (MENU) -->
     <div id="menu-screen" class="hidden">
         <p>Choisis ton mode d'entraînement :</p>
-        <select id="lesson-select">
+        
+        <!-- Modification de la balise select -->
+        <select id="lesson-select" multiple size="5" style="height: auto; min-height: 120px;">
             <option value="">-- Charger les leçons... --</option>
         </select>
-        <button id="btn-lesson" disabled>Réviser cette leçon</button>
+        <p style="font-size: 12px; color: #7f8c8d; margin-top: -5px;">Maintenez <b>Ctrl</b> (ou <b>Cmd</b> sur Mac) pour sélectionner plusieurs leçons.</p>
+
+        <button id="btn-lesson" disabled>Réviser ces leçons</button>
         <button id="btn-random" class="secondary">20 mots au hasard</button>
-        <button id="btn-hard" style="background-color: #e67e22;" disabled>Mots difficiles (mes échecs)</button>
+        <!-- Modification du bouton "Mots difficiles" -->
+        <button id="btn-hard" style="background-color: #e67e22;" disabled>Réviser mes erreurs</button>
         <button id="btn-go-stats" style="background-color: #2ecc71;">📊 Voir mes statistiques</button>
         
         <div style="display: flex; gap: 10px; margin-top: 10px;">
@@ -240,7 +245,10 @@
             select.appendChild(opt);
         });
 
-        select.onchange = () => { document.getElementById("btn-lesson").disabled = !select.value; };
+        // Modification de la sélection
+        select.onchange = () => { 
+            document.getElementById("btn-lesson").disabled = select.selectedOptions.length === 0 || select.selectedOptions[0].value === ""; 
+        };
         const hasHardWords = database.some(item => Number(item.Echecs) > 0);
         if(hasHardWords) document.getElementById("btn-hard").disabled = false;
     }
@@ -421,35 +429,56 @@
             failedList.innerHTML = failedWords.map(w => `<li><b>${w.Francais}</b> ➔ ${w.Espagnol} <span class="stat-badge" style="background:#e74c3c;">${w.pourcentage}%</span></li>`).join('');
         }
 
+        // Modification du graphique : affichage jour par jour avec ligne
         fetch(`${API_URL}?action=getScores&token=${encodeURIComponent(authToken)}`)
             .then(res => res.json())
             .then(scores => {
                 if(scores.length === 0) {
                     if(myChartInstance) myChartInstance.destroy(); return;
                 }
-                let monthsObj = {};
+                
+                let daysObj = {}; 
                 scores.forEach(s => {
-                    let month = s.Date;
-                    if(!monthsObj[month]) monthsObj[month] = { score: 0, total: 0 };
-                    monthsObj[month].score += Number(s.Score); monthsObj[month].total += Number(s.Total);
+                    let dateStr = String(s.Date).split('T')[0];
+                    if (dateStr.includes(' ')) dateStr = dateStr.split(' ')[0];
+                    
+                    if(!daysObj[dateStr]) daysObj[dateStr] = { score: 0, total: 0 };
+                    daysObj[dateStr].score += Number(s.Score); 
+                    daysObj[dateStr].total += Number(s.Total);
                 });
 
-                let sortedMonths = Object.keys(monthsObj).sort();
-                let chartLabels = []; let chartData = [];
-                sortedMonths.forEach(m => {
-                    chartLabels.push(m);
-                    chartData.push(Math.round((monthsObj[m].score / monthsObj[m].total) * 100));
+                let sortedDays = Object.keys(daysObj).sort();
+                let chartLabels = []; 
+                let chartData = [];
+                
+                sortedDays.forEach(d => {
+                    let dateObj = new Date(d);
+                    let formattedDate = isNaN(dateObj.getTime()) ? d : dateObj.toLocaleDateString('fr-FR');
+                    
+                    chartLabels.push(formattedDate);
+                    chartData.push(Math.round((daysObj[d].score / daysObj[d].total) * 100));
                 });
 
                 if(myChartInstance) myChartInstance.destroy();
                 const ctx = document.getElementById('monthlyChart').getContext('2d');
                 myChartInstance = new Chart(ctx, {
-                    type: 'bar',
+                    type: 'line', 
                     data: {
                         labels: chartLabels,
-                        datasets: [{ label: '% de bonnes réponses', data: chartData, backgroundColor: '#2ecc71', borderColor: '#27ae60', borderWidth: 1, borderRadius: 5 }]
+                        datasets: [{ 
+                            label: '% de bonnes réponses', 
+                            data: chartData, 
+                            backgroundColor: 'rgba(46, 204, 113, 0.2)', 
+                            borderColor: '#27ae60', 
+                            borderWidth: 2, 
+                            fill: true,
+                            tension: 0.3 
+                        }]
                     },
-                    options: { responsive: true, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: function(v) { return v + '%'; } } } } }
+                    options: { 
+                        responsive: true, 
+                        scales: { y: { beginAtZero: true, max: 100, ticks: { callback: function(v) { return v + '%'; } } } } 
+                    }
                 });
             }).catch(err => console.error(err));
     }
@@ -476,17 +505,21 @@
 
     function logout() { localStorage.setItem("maman_espagnol_token", ""); window.location.reload(); }
 
+    // Modification du bouton pour réviser la leçon
     document.getElementById("btn-lesson").onclick = () => {
-        const lesson = document.getElementById("lesson-select").value;
-        currentQuiz = database.filter(item => item.Lecon === lesson); startQuiz(lesson);
+        const selectedOptions = Array.from(document.getElementById("lesson-select").selectedOptions).map(opt => opt.value);
+        currentQuiz = database.filter(item => selectedOptions.includes(item.Lecon)); 
+        startQuiz(selectedOptions.join(", "));
     };
 
     document.getElementById("btn-random").onclick = () => {
         currentQuiz = [...database].sort(() => 0.5 - Math.random()).slice(0, 20); startQuiz("Mots au hasard");
     };
 
+    // Modification du bouton d'erreur
     document.getElementById("btn-hard").onclick = () => {
-        currentQuiz = database.filter(item => Number(item.Echecs) > 0).sort((a, b) => Number(b.Echecs) - Number(a.Echecs)).slice(0, 20); startQuiz("Mots difficiles");
+        currentQuiz = database.filter(item => Number(item.Echecs) > 0).sort((a, b) => Number(b.Echecs) - Number(a.Echecs)).slice(0, 20); 
+        startQuiz("Réviser mes erreurs"); 
     };
 
     function startQuiz(modeName) {
